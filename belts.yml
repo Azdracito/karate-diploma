@@ -1,0 +1,45 @@
+- name: white-yellow
+  entry:
+    - blanche-jaune
+    - bj
+    - b-j
+- name: yellow
+  entry:
+    - jaune
+    - j
+- name: yellow-orange
+  entry:
+    - jaune-orange
+    - jo
+    - j-o
+- name: orange
+  entry:
+    - orange
+    - o
+- name: orange-green
+  entry:
+    - orange-vert
+    - ov
+    - o-v
+- name: green
+  entry:
+    - vert
+    - v
+- name: green-blue
+  entry:
+    - vert-bleu
+    - vb
+    - v-b
+- name: blue
+  entry:
+    - bleu
+    - b
+- name: blue-brown
+  entry:
+    - bleu-marron
+    - bm
+    - b-m
+- name: brown
+  entry:
+    - marron
+    - m
