@@ -1,0 +1,8 @@
+services:
+  node:
+    build: .
+    volumes:
+      - ./:/srv/app:rw,cached
+    command: "npm run start"
+    environment:
+      - NODE_ENV=development
