@@ -23,6 +23,10 @@ export default abstract class BaseGenerateDiploma {
     this.madeAt = this.options.date ?? new Date()
   }
 
+  private readonly belts: IBelt[] = parse(
+    fs.readFileSync('./belts.yml', 'utf8')
+  )
+
   public get baseMember(): Pick<IDiploma, 'clubName' | 'city'> {
     return {
       clubName: this.CLUB_NAME,
@@ -30,9 +34,40 @@ export default abstract class BaseGenerateDiploma {
     }
   }
 
-  private readonly belts: IBelt[] = parse(
-    fs.readFileSync('./belts.yml', 'utf8')
-  )
+  private getBeltImage(beltType: string): { width: number; height: number; name: string } | null {
+    const find = this.belts.find(belt => belt.entry.includes(beltType.toLowerCase()))
+    if (!find) {
+      return null
+    }
+    const image = sizeOf(`./diplomas/${find.name}.png`)
+    if (image.width === undefined || image.height === undefined) {
+      return null
+    }
+    return { width: image.width, height: image.height, name: find.name }
+  }
+
+
+  private drawText(doc: typeof PDFDocument, text: string, x: number, y: number, options?: object): void {
+    doc.text(text, x, y, options)
+  }
+
+  private drawImage(doc: typeof PDFDocument, beltType: string): void {
+    const imageInformation = this.getBeltImage(beltType)
+    if (imageInformation) {
+      doc.image(
+        `./diplomas/${imageInformation.name}.png`,
+        doc.page.width / 2 - imageInformation.width / 2,
+        doc.page.height / 2 - imageInformation.height / 2,
+        {
+          scale: 1,
+          align: 'center',
+          valign: 'center',
+          width: imageInformation.width,
+          height: imageInformation.height
+        }
+      )
+    }
+  }
 
   public generateDiplomas(
     diplomas: ILiteDiploma[],
@@ -46,6 +81,7 @@ export default abstract class BaseGenerateDiploma {
         CreationDate: this.madeAt
       }
     })
+
     const steam = doc.pipe(
       fs.createWriteStream(
         util.format(
@@ -65,68 +101,21 @@ export default abstract class BaseGenerateDiploma {
 
     diplomas.forEach((liteDiploma, i) => {
       const diploma: IDiploma = { ...this.baseMember, ...liteDiploma }
-      const find = this.belts.find((belt) =>
-        belt.entry.includes(diploma.type.toLowerCase())
-      )
-      if (find == null) {
+      const beltImage = this.getBeltImage(diploma.type)
+      if (!beltImage) {
         return (error = new GenerateDiplomaError(diploma.type))
       }
 
-      const image = sizeOf(`./diplomas/${find.name}.png`)
-      const { width: imageWidth = 0, height: imageHeight = 0 } = image
-
-      doc.image(
-        `./diplomas/${find.name}.png`,
-        doc.page.width / 2 - imageWidth / 2,
-        doc.page.height / 2 - imageHeight / 2,
-        {
-          scale: 1,
-          align: 'center',
-          valign: 'center',
-          width: imageWidth,
-          height: imageHeight
-        }
-      )
+      this.drawImage(doc, diploma.type)
 
       // Write the club name
-      doc.text(
-        diploma.clubName,
-        doc.page.width / 3 - 30,
-        doc.page.height / 2 - 30,
-        {
-          align: 'left'
-        }
-      )
-
+      this.drawText(doc, diploma.clubName, doc.page.width / 3 - 30, doc.page.height / 2 - 30, { align: 'left' })
       // Write the member name
-      doc.text(
-        util.format('%s %s', diploma.firstName, diploma.lastName.toUpperCase()),
-        doc.page.width / 3 - 30,
-        doc.page.height / 2 + 65,
-        {
-          align: 'left'
-        }
-      )
-
+      this.drawText(doc, `${diploma.firstName} ${diploma.lastName.toUpperCase()}`, doc.page.width / 3 - 30, doc.page.height / 2 + 65, { align: 'left' })
       // Write the city
-      doc.text(
-        diploma.city,
-        doc.page.width / 3 - 30,
-        doc.page.height / 1.5 - 28,
-        {
-          align: 'left'
-        }
-      )
-
+      this.drawText(doc, diploma.city, doc.page.width / 3 - 30, doc.page.height / 1.5 - 28, { align: 'left' })
       // Write the date
-      doc.text(
-        (diploma.date ?? this.madeAt).toLocaleDateString('fr'),
-        doc.page.width / 1.7 + 8,
-        doc.page.height / 1.5 - 28,
-        {
-          align: 'left'
-        }
-      )
+      this.drawText(doc, (diploma.date ?? this.madeAt).toLocaleDateString('fr'), doc.page.width / 1.7 + 8, doc.page.height / 1.5 - 28, { align: 'left' })
 
       if (i + 1 < diplomas.length) doc.addPage()
     })
